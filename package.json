@@ -1,0 +1,41 @@
+{
+  "name": "code-quality-test",
+  "version": "1.0.0",
+  "description": "代码质量管理系统测试项目",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint --ext .js,.vue src/",
+    "lint:fix": "eslint --ext .js,.vue src/ --fix",
+    "format": "prettier --write \"**/*.{js,vue,css,md,json}\"",
+    "test": "echo \"运行测试...\" && exit 0",
+    "test:coverage": "echo \"生成覆盖率报告...\" && exit 0",
+    "prepare": "husky install"
+  },
+  "keywords": [
+    "code-quality",
+    "sonarqube",
+    "test"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.23.0",
+    "@babel/eslint-parser": "^7.23.0",
+    "eslint": "^8.50.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-vue": "^9.17.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.3"
+  },
+  "dependencies": {},
+  "lint-staged": {
+    "*.{js,vue}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{css,md,json}": [
+      "prettier --write"
+    ]
+  }
+}

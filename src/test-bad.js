@@ -1,1 +1,1 @@
-const bad = 1
+console.log(1 === 2)

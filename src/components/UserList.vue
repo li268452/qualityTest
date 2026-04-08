@@ -3,7 +3,7 @@
     <h1>用户列表</h1>
 
     <!-- 问题：v-for 没有 key -->
-    <div v-for="user in users" class="user-item">
+    <div v-for="user in users" :key="user.id" class="user-item">
       <span>{{ user.name }}</span>
       <span>{{ user.email }}</span>
     </div>
@@ -51,15 +51,13 @@ export default {
     },
     handleDelete(userId) {
       // 问题：使用 == 而不是 ===
-      if (userId == null) {
+      if (userId === null) {
         console.warn('Invalid user ID')
         return
       }
-
       // 问题：没有确认对话框
       this.deleteUser(userId)
     },
-
     async deleteUser(userId) {
       // 问题：没有错误处理
       await fetch(`/api/users/${userId}`, { method: 'DELETE' })

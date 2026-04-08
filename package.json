@@ -23,12 +23,12 @@
     "@babel/eslint-parser": "^7.23.0",
     "eslint": "^8.50.0",
     "eslint-config-prettier": "^9.0.0",
-    "eslint-plugin-vue": "^9.17.0",
+    "eslint-plugin-vue": "^9.33.0",
     "husky": "^8.0.3",
     "lint-staged": "^15.0.0",
-    "prettier": "^3.0.3"
+    "prettier": "^3.0.3",
+    "vue-eslint-parser": "^10.4.0"
   },
-  "dependencies": {},
   "lint-staged": {
     "*.{js,vue}": [
       "eslint --fix",

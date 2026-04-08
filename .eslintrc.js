@@ -7,10 +7,12 @@ module.exports = {
   },
   extends: [
     'eslint:recommended',
+    'plugin:vue/vue3-recommended',
     'prettier', // 必须放在最后，会覆盖前面的冲突规则
   ],
-  parser: '@babel/eslint-parser',
+  parser: 'vue-eslint-parser',
   parserOptions: {
+    parser: '@babel/eslint-parser',
     ecmaVersion: 2021,
     sourceType: 'module',
     requireConfigFile: false,
@@ -18,6 +20,7 @@ module.exports = {
       presets: [],
     },
   },
+  plugins: ['vue'],
   rules: {
     // ==================== 可能的错误 ====================
     'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',

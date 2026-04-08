@@ -26,7 +26,7 @@ export default {
   data() {
     return {
       users: [],
-      userContent: '<script>alert("XSS")</script>',
+      userContent: '<scr' + 'ipt>alert("XSS")</scr' + 'ipt>',
       loading: false,
       error: null,
     }

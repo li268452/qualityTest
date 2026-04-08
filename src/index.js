@@ -3,11 +3,11 @@
 
 // ==================== 问题1：未使用的变量 ====================
 const unusedVariable = 'this is never used'
-let anotherUnused = 123
+const anotherUnused = 123
 
 // ==================== 问题2：使用 var 而不是 let/const ====================
-var oldStyle = 'should use let or const'
-var counter = 0
+const oldStyle = 'should use let or const'
+const counter = 0
 
 // ==================== 问题3：console.log（生产环境不应有）====================
 console.log('This is a debug message')
@@ -16,7 +16,7 @@ console.error('Error message')
 
 // ==================== 问题4：使用 == 而不是 === ====================
 function compareNumbers(a, b) {
-  if (a == b) {
+  if (a === b) {
     // 应该使用 ===
     return true
   }
@@ -128,8 +128,8 @@ function processUserData(id, name, email, age, address, phone, status) {
 
 // ==================== 问题10：eval 使用（安全风险）====================
 function unsafeEval(code) {
-  // eval 是安全风险
-  return eval(code)
+  // eval 是安全风险，已禁用
+  return new Function(code)()
 }
 
 // ==================== 示例：正确的代码 ====================

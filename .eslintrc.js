@@ -13,6 +13,10 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2021,
     sourceType: 'module',
+    requireConfigFile: false,
+    babelOptions: {
+      presets: [],
+    },
   },
   rules: {
     // ==================== 可能的错误 ====================

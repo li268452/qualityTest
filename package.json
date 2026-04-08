@@ -31,7 +31,7 @@
   },
   "lint-staged": {
     "*.{js,vue}": [
-      "eslint --fix",
+      "eslint --fix -f ./scripts/eslint-summary.js",
       "prettier --write"
     ],
     "*.{css,md,json}": [

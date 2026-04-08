@@ -1,4 +1,31 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+echo ""
+echo "========================================="
+echo "  Pre-commit: 代码质量检查"
+echo "========================================="
+echo ""
+
 npx lint-staged
+
+RESULT=$?
+
+echo ""
+if [ $RESULT -ne 0 ]; then
+  echo "========================================="
+  echo "  提交失败!"
+  echo "========================================="
+  echo ""
+  echo "原因: ESLint 检测到代码错误，请修复后再提交"
+  echo ""
+  echo "修复方法:"
+  echo "  自动修复: npm run lint:fix"
+  echo "  查看问题: npm run lint"
+  echo ""
+  echo "提示: error 会阻止提交, warning 仅提醒"
+  echo "========================================="
+  echo ""
+fi
+
+exit $RESULT

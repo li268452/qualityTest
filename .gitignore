@@ -11,3 +11,4 @@ coverage/
 *.swp
 *.swo
 *.test-prompt.md
+*.test-report.md

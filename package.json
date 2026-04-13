@@ -2,6 +2,7 @@
   "name": "code-quality-test",
   "version": "1.0.0",
   "description": "代码质量管理系统测试项目",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "dev": "vite",
@@ -36,7 +37,7 @@
   },
   "lint-staged": {
     "*.{js,vue}": [
-      "eslint --fix -f ./scripts/eslint-summary.js",
+      "eslint --fix -f ./scripts/eslint-summary.cjs",
       "prettier --write"
     ],
     "*.{css,md,json}": [

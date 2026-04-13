@@ -86,7 +86,14 @@ export default {
         alert('字典值不能为空')
         return
       }
-      this.$emit('save', { ...this.formData })
+      // 只提交字典数据的字段，过滤掉其他无关字段
+      const cleanData = {
+        label: this.formData.label,
+        value: this.formData.value,
+        sort: this.formData.sort,
+        remark: this.formData.remark,
+      }
+      this.$emit('save', cleanData)
     },
     handleCancel() {
       this.$emit('cancel')

@@ -3,8 +3,8 @@
  * 模拟后端接口返回数据，后续对接真实后端时替换此文件即可
  */
 
-let nextTypeId = 4
-let nextItemId = 7
+let nextTypeId = 5
+let nextItemId = 11
 
 // 字典类型假数据
 const dictTypes = [
@@ -32,6 +32,14 @@ const dictTypes = [
     remark: '支付渠道类型',
     createdAt: '2026-04-02 09:00:00',
   },
+  {
+    id: 4,
+    name: '优惠券类型',
+    code: 'coupon_type',
+    status: 1,
+    remark: '优惠券分类',
+    createdAt: '2026-04-10 10:00:00',
+  },
 ]
 
 // 字典数据假数据
@@ -52,6 +60,43 @@ const dictItems = [
     value: 'wechat',
     sort: 1,
     remark: '',
+  },
+  {
+    id: 7,
+    typeId: 3,
+    typeCode: 'pay_method',
+    label: '支付宝',
+    value: 'alipay',
+    sort: 2,
+    remark: '',
+  },
+  // coupon_type
+  {
+    id: 8,
+    typeId: 4,
+    typeCode: 'coupon_type',
+    label: '满减券',
+    value: 'full_reduction',
+    sort: 1,
+    remark: '满X元减Y元',
+  },
+  {
+    id: 9,
+    typeId: 4,
+    typeCode: 'coupon_type',
+    label: '折扣券',
+    value: 'discount',
+    sort: 2,
+    remark: '打X折',
+  },
+  {
+    id: 10,
+    typeId: 4,
+    typeCode: 'coupon_type',
+    label: '无门槛券',
+    value: 'no_threshold',
+    sort: 3,
+    remark: '直接抵扣',
   },
 ]
 

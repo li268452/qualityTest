@@ -130,19 +130,34 @@ export default {
         // 编辑模式
         this.dataFormEditData = item
       } else {
-        // 新增模式
+        // 新增模式 - 保存当前类型信息
         this.dataFormEditData = null
+        if (type && type.code) {
+          this.currentTypeCode = type.code
+        }
       }
       this.dataFormVisible = true
     },
 
     // 保存字典数据
     async handleSaveData(formData) {
+      // 清理 formData，只保留字典数据的字段（排除 id, name, code, status 等字典类型的字段）
+      const cleanData = {
+        label: formData.label,
+        value: formData.value,
+        sort: formData.sort,
+        remark: formData.remark,
+      }
+      // 编辑模式才传 id
+      if (formData.id) {
+        cleanData.id = formData.id
+      }
+
       let res
       if (formData.id) {
-        res = await dictItemApi.update(formData.id, formData)
+        res = await dictItemApi.update(formData.id, cleanData)
       } else {
-        res = await dictItemApi.create(this.currentTypeCode, formData)
+        res = await dictItemApi.create(this.currentTypeCode, cleanData)
       }
 
       if (res.code === 200) {

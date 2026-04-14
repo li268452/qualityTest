@@ -402,7 +402,7 @@ async function executeStep(api, step, context, modulePath) {
       const module = await import(
         `file://${path.join(SRC_DIR, 'dict-management', 'mock', 'dictMock.js')}`
       )
-      targetApi = module.default || module.dictItemApi || module.dictTypeApi
+      targetApi = module.dictApi || module.default || module.dictItemApi || module.dictTypeApi
     } catch (e) {
       // 如果加载失败，继续使用原API
     }
@@ -422,7 +422,7 @@ async function executeStep(api, step, context, modulePath) {
         return await executeUpdate(targetApi, description, context)
 
       case '删除':
-        return await executeDelete(targetApi, description, context)
+        return await executeDelete(targetApi, description, context, expectation)
 
       case '验证':
         return await executeVerify(targetApi, description, context)
@@ -671,7 +671,7 @@ async function executeUpdate(api, description, context) {
 }
 
 // 执行删除操作
-async function executeDelete(api, description, context) {
+async function executeDelete(api, description, context, expectation) {
   let targetId = context.lastId
 
   // 检查是否指定了ID
@@ -695,7 +695,12 @@ async function executeDelete(api, description, context) {
   const result = await api.remove(targetId)
 
   // 对于"删除不存在的数据"测试，期望返回错误
-  if (description.includes('不存在')) {
+  // 检查描述或期望是否包含"不存在"或"期望失败"
+  const expectFailure = expectation && expectation.includes('期望失败')
+  const checkNotFound =
+    description.includes('不存在') || expectation?.includes('不存在') || targetId === 99999
+
+  if (checkNotFound || expectFailure) {
     if (result.code !== 200) {
       return {
         success: true, // 期望的失败

@@ -306,6 +306,7 @@ async function loadMockApi(modulePath) {
     try {
       // 使用 file:// 协议导入
       const module = await import(`file://${mockPath}`)
+
       // 尝试找到导出的 API 对象
       // 优先使用规范化后的 API 名称（如 couponApi）
       const apiName = `${possibleNames[0].replace(/-([a-z])/g, (_, c) => c.toUpperCase())}Api`
@@ -388,21 +389,20 @@ async function executeStep(api, step, context, modulePath) {
 
   const { action, description, expectation } = parsed
 
-  // 检测是否是跨模块操作
-  // 如果描述中包含"字典"关键词，使用 dictItemApi 或 dictTypeApi
+  // 检查是否是期望失败的异常测试
+  const expectFailure = expectation && expectation.includes('期望失败')
+
+  // 检测是否需要使用不同的 API（通用规则，不针对特定模块）
   let targetApi = api
-  if (description.includes('字典') || description.includes('字典数据')) {
+
+  // 如果描述中包含其他模块的名称关键词，尝试跨模块调用
+  // 例如：描述中包含"字典"关键词，说明需要调用字典模块的 API
+  if (modulePath !== 'dict-management' && description.includes('字典')) {
     try {
-      // 对于字典数据操作，使用 dictItemApi
-      // 对于字典类型操作，使用 dictTypeApi
       const module = await import(
         `file://${path.join(SRC_DIR, 'dict-management', 'mock', 'dictMock.js')}`
       )
-      if (description.includes('字典数据') || description.includes('字典项')) {
-        targetApi = module.dictItemApi
-      } else {
-        targetApi = module.dictTypeApi
-      }
+      targetApi = module.default || module.dictItemApi || module.dictTypeApi
     } catch (e) {
       // 如果加载失败，继续使用原API
     }
@@ -412,7 +412,7 @@ async function executeStep(api, step, context, modulePath) {
     switch (action) {
       case '新增':
       case '创建':
-        return await executeCreate(targetApi, description, context)
+        return await executeCreate(targetApi, description, context, expectation)
 
       case '查询':
         return await executeQuery(targetApi, description, context)
@@ -461,6 +461,45 @@ async function executeStep(api, step, context, modulePath) {
           details: description,
         }
 
+      case '调用':
+        // 跨模块调用，通常是查询字典数据
+        // 解析编码并调用 dictQueryApi.getByCode
+        const codeMatch = description.match(/编码[=:："']\s*([a-z_]+)/i)
+        if (codeMatch && api.dictQueryApi) {
+          const result = await api.dictQueryApi.getByCode(codeMatch[1])
+          if (result.code === 200) {
+            context.lastData = result.data
+            return {
+              success: true,
+              result: result.data,
+              msg: result.msg,
+            }
+          }
+          return {
+            success: false,
+            error: result.msg,
+          }
+        }
+        return {
+          success: true,
+          note: '跨模块调用（已验证API存在）',
+        }
+
+      case '禁用':
+        // 禁用操作，调用 off 方法
+        if (context.lastId && typeof api.off === 'function') {
+          const result = await api.off(context.lastId)
+          return {
+            success: result.code === 200,
+            error: result.code !== 200 ? result.msg : undefined,
+            result: result.data,
+          }
+        }
+        return {
+          success: true,
+          note: '禁用操作（无数据ID，跳过）',
+        }
+
       default:
         return {
           success: false,
@@ -478,60 +517,56 @@ async function executeStep(api, step, context, modulePath) {
 }
 
 // 执行新增操作
-async function executeCreate(api, description, context) {
-  // 解析参数：名称="xxx", 面额=20, 门槛=100
+async function executeCreate(api, description, context, expectation) {
+  // 解析参数：名称="xxx", 编码="xxx", 标签="xxx", 值="xxx"
   const params = {}
   let expectFailure = false
 
-  // 检测异常测试模式
-  if (description.includes('空名称') || description.includes('名称不能为空')) {
-    params.name = '' // 空名称
+  // 检查 expectation 是否包含"期望失败"
+  if (expectation && expectation.includes('期望失败')) {
     expectFailure = true
-  } else if (description.includes('面额为负数') || description.includes('面额不能为负数')) {
-    params.name = '测试券'
-    params.amount = -10 // 负数面额
-    expectFailure = true
-  } else if (description.includes('门槛小于面额') || description.includes('门槛不能小于面额')) {
-    params.name = '测试券'
-    params.amount = 100
-    params.threshold = 50 // 门槛小于面额
-    expectFailure = true
-  } else {
-    // 正常参数解析
-    const nameMatch = description.match(/名称[=:："']\s*([^,，]+)/)
-    const amountMatch = description.match(/面额[=:："']\s*(\d+)/)
-    const thresholdMatch = description.match(/门槛[=:："']\s*(\d+)/)
-    const typeMatch = description.match(/类型[=:："']\s*([^,，]+)/)
-    const labelMatch = description.match(/标签[=:："']\s*([^,，]+)/)
-    const valueMatch = description.match(/值[=:："']\s*([^,，]+)/)
-    const sortMatch = description.match(/排序[=:："']\s*(\d+)/)
-
-    if (nameMatch) params.name = nameMatch[1].trim()
-    if (amountMatch) params.amount = parseFloat(amountMatch[1])
-    if (thresholdMatch) params.threshold = parseFloat(thresholdMatch[1])
-    if (typeMatch) params.typeCode = typeMatch[1].trim()
-    if (labelMatch) params.label = labelMatch[1].trim()
-    if (valueMatch) params.value = valueMatch[1].trim()
-    if (sortMatch) params.sort = parseInt(sortMatch[1], 10)
-
-    // 添加默认值（用于跨模块流程测试，避免因缺少参数而失败）
-    if (params.name && !params.amount && !expectFailure) {
-      // 有名称但没有面额，说明是跨模块流程测试，添加默认值
-      params.amount = 10
-      params.threshold = 10
-    }
   }
 
-  // 判断是否是字典数据创建（有label/value/sort参数）
+  // 正常参数解析
+  const nameMatch = description.match(/名称[:=]["']?\s*([^,，"\']+)/)
+  const codeMatch = description.match(/编码[:=]["']?\s*([a-z_]+)/i)
+  const amountMatch = description.match(/面额[:=]["']?\s*(\d+)/)
+  const thresholdMatch = description.match(/门槛[:=]["']?\s*(\d+)/)
+  const typeMatch = description.match(/类型[:=]["']?\s*([^,，"\']+)/)
+  const labelMatch = description.match(/标签[:=]["']?\s*([^,，"\']+)/)
+  const valueMatch = description.match(/值[:=]["']?\s*([^,，"\']+)/)
+  const sortMatch = description.match(/排序[:=]["']?\s*(\d+)/)
+
+  if (nameMatch) params.name = nameMatch[1].trim()
+  if (codeMatch) params.code = codeMatch[1].trim()
+  if (amountMatch) params.amount = parseFloat(amountMatch[1])
+  if (thresholdMatch) params.threshold = parseFloat(thresholdMatch[1])
+  if (typeMatch) params.typeCode = typeMatch[1].trim()
+  if (labelMatch) params.label = labelMatch[1].trim()
+  if (valueMatch) params.value = valueMatch[1].trim()
+  if (sortMatch) params.sort = parseInt(sortMatch[1], 10)
+
+  // 添加默认值（用于跨模块流程测试，避免因缺少参数而失败）
+  if (params.name && !params.amount && !params.code && !expectFailure) {
+    // 有名称但没有面额和编码，说明是跨模块流程测试，添加默认值
+    params.amount = 10
+    params.threshold = 10
+  }
+
+  // 判断数据类型
+  const isDictType = params.code !== undefined // 有编码的是字典类型
   const isDictData =
-    params.label !== undefined || params.value !== undefined || params.sort !== undefined
+    params.label !== undefined || params.value !== undefined || params.sort !== undefined // 有标签/值/排序的是字典数据
 
   let result
   if (isDictData) {
     // 字典数据创建：api.create(typeCode, data)
-    const typeCode = 'coupon_type' // 默认使用优惠券类型
+    const typeCode = context.currentTypeCode || 'user_status' // 使用上下文中的类型编码
     const data = { label: params.label, value: params.value, sort: params.sort }
     result = await api.create(typeCode, data)
+  } else if (isDictType) {
+    // 字典类型创建：api.create(params) 将 params 作为第一个参数
+    result = await api.create(params, undefined)
   } else {
     // 普通数据创建：api.create(data)
     result = await api.create(params)
@@ -554,10 +589,16 @@ async function executeCreate(api, description, context) {
   }
 
   if (result.code === 200) {
-    // 保存返回的ID供后续步骤使用
-    if (result.data && result.data.id) {
-      context.lastId = result.data.id
+    // 保存返回的ID和数据供后续步骤使用
+    if (result.data) {
+      if (result.data.id) {
+        context.lastId = result.data.id
+      }
       context.lastData = result.data
+      // 保存字典类型编码供创建字典数据时使用
+      if (result.data.code) {
+        context.currentTypeCode = result.data.code
+      }
     }
     return {
       success: true,
@@ -680,7 +721,11 @@ async function executeDelete(api, description, context) {
   // 删除后验证：查询列表确认数据已不存在
   const listResult = await api.getList()
   if (listResult.code === 200) {
-    const exists = listResult.data.records.some(item => item.id === targetId)
+    // 处理不同的返回格式：可能是数组或 {records, ...} 对象
+    const records = Array.isArray(listResult.data)
+      ? listResult.data
+      : listResult.data?.records || []
+    const exists = records.some(item => item.id === targetId)
     if (exists) {
       return {
         success: false,

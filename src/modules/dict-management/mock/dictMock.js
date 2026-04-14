@@ -119,110 +119,107 @@ function errorResponse(msg, code = 400) {
 }
 
 /**
- * 字典类型 API Mock
+ * 字典管理 API Mock（统一接口）
  */
-export const dictTypeApi = {
-  // 分页查询字典类型
-  async getList(params = {}) {
+export const dictApi = {
+  /**
+   * 查询列表
+   * @param {string|object} typeCode - 类型编码或查询参数
+   * @returns {Promise} 列表数据
+   */
+  async getList(typeCode) {
     await delay()
-    let list = [...dictTypes]
 
-    if (params.name) {
-      list = list.filter(t => t.name.includes(params.name))
-    }
-    if (params.code) {
-      list = list.filter(t => t.code.includes(params.code))
+    // 如果 typeCode 是对象，说明是查询字典类型列表
+    if (typeof typeCode === 'object' && typeCode !== null) {
+      const params = typeCode
+      let list = [...dictTypes]
+
+      if (params.name) {
+        list = list.filter(t => t.name.includes(params.name))
+      }
+      if (params.code) {
+        list = list.filter(t => t.code.includes(params.code))
+      }
+
+      const page = params.page || 1
+      const size = params.size || 10
+      const start = (page - 1) * size
+      const records = list.slice(start, start + size)
+
+      return successResponse({
+        records,
+        total: list.length,
+        page,
+        size,
+      })
     }
 
-    const page = params.page || 1
-    const size = params.size || 10
+    // 如果有 typeCode，查询该类型下的字典数据
+    if (typeCode && typeof typeCode === 'string') {
+      const items = dictItems
+        .filter(item => item.typeCode === typeCode)
+        .sort((a, b) => a.sort - b.sort)
+      return successResponse(items)
+    }
+
+    // 默认返回字典类型列表（分页）
+    const page = 1
+    const size = 10
     const start = (page - 1) * size
-    const records = list.slice(start, start + size)
+    const records = dictTypes.slice(start, start + size)
 
     return successResponse({
       records,
-      total: list.length,
+      total: dictTypes.length,
       page,
       size,
     })
   },
 
-  // 新增字典类型
-  async create(data) {
-    await delay()
-    if (!data.name) {
-      return errorResponse('字典名称不能为空')
-    }
-    if (!data.code) {
-      return errorResponse('字典编码不能为空')
-    }
-    if (dictTypes.some(t => t.code === data.code)) {
-      return errorResponse('字典编码已存在')
-    }
-
-    const newType = {
-      id: nextTypeId++,
-      name: data.name,
-      code: data.code,
-      status: 1,
-      remark: data.remark || '',
-      createdAt: new Date().toLocaleString('zh-CN'),
-    }
-    dictTypes.push(newType)
-    return successResponse(newType, '新增成功')
-  },
-
-  // 编辑字典类型
-  async update(id, data) {
-    await delay()
-    const index = dictTypes.findIndex(t => t.id === id)
-    if (index === -1) {
-      return errorResponse('字典类型不存在', 404)
-    }
-    if (data.name !== undefined) dictTypes[index].name = data.name
-    if (data.remark !== undefined) dictTypes[index].remark = data.remark
-    if (data.status !== undefined) dictTypes[index].status = data.status
-    return successResponse(dictTypes[index], '修改成功')
-  },
-
-  // 删除字典类型
-  async remove(id) {
-    await delay()
-    const index = dictTypes.findIndex(t => t.id === id)
-    if (index === -1) {
-      return errorResponse('字典类型不存在', 404)
-    }
-
-    const type = dictTypes[index]
-
-    // 级联删除字典数据
-    for (let i = dictItems.length - 1; i >= 0; i--) {
-      if (dictItems[i].typeId === id) {
-        dictItems.splice(i, 1)
-      }
-    }
-    dictTypes.splice(index, 1)
-    return successResponse(null, '删除成功')
-  },
-}
-
-/**
- * 字典数据 API Mock
- */
-export const dictItemApi = {
-  // 查询某类型下的字典数据
-  async getList(typeCode) {
-    await delay()
-    const items = dictItems
-      .filter(item => item.typeCode === typeCode)
-      .sort((a, b) => a.sort - b.sort)
-    return successResponse(items)
-  },
-
-  // 新增字典数据
+  /**
+   * 创建
+   * @param {string|object} typeCode - 类型编码或字典类型数据
+   * @param {object} data - 字典数据
+   * @returns {Promise} 创建结果
+   */
   async create(typeCode, data) {
     await delay()
-    if (!data.label) {
+
+    // 判断是创建字典类型还是字典数据
+    // 情况1: typeCode 是对象且包含 code 字段，或 typeCode 缺失 -> 创建字典类型
+    // 情况2: typeCode 是字符串且没有 code 字段，且有 data 参数 -> 创建字典数据
+    const isDictType =
+      (!typeCode && !data) || (typeCode && typeof typeCode === 'object' && typeCode.code)
+
+    if (isDictType) {
+      // 创建字典类型
+      const params = typeCode && typeof typeCode === 'object' ? typeCode : data
+
+      if (!params || !params.name) {
+        return errorResponse('字典名称不能为空')
+      }
+      if (!params.code) {
+        return errorResponse('字典编码不能为空')
+      }
+      if (dictTypes.some(t => t.code === params.code)) {
+        return errorResponse('字典编码已存在')
+      }
+
+      const newType = {
+        id: nextTypeId++,
+        name: params.name,
+        code: params.code,
+        status: 1,
+        remark: params.remark || '',
+        createdAt: new Date().toLocaleString('zh-CN'),
+      }
+      dictTypes.push(newType)
+      return successResponse(newType, '新增成功')
+    }
+
+    // 创建字典数据
+    if (!data || !data.label) {
       return errorResponse('字典标签不能为空')
     }
     if (!data.value) {
@@ -248,37 +245,105 @@ export const dictItemApi = {
     return successResponse(newItem, '新增成功')
   },
 
-  // 编辑字典数据
+  /**
+   * 更新
+   * @param {number} id - ID
+   * @param {object} data - 数据
+   * @returns {Promise} 更新结果
+   */
   async update(id, data) {
     await delay()
-    const index = dictItems.findIndex(item => item.id === id)
-    if (index === -1) {
-      return errorResponse('字典数据不存在', 404)
+
+    // 先尝试查找字典类型
+    const typeIndex = dictTypes.findIndex(t => t.id === id)
+    if (typeIndex !== -1) {
+      // 更新字典类型
+      if (data.name !== undefined) dictTypes[typeIndex].name = data.name
+      if (data.remark !== undefined) dictTypes[typeIndex].remark = data.remark
+      if (data.status !== undefined) dictTypes[typeIndex].status = data.status
+      return successResponse(dictTypes[typeIndex], '修改成功')
     }
 
-    if (data.label !== undefined) dictItems[index].label = data.label
-    if (data.value !== undefined) dictItems[index].value = data.value
-    if (data.sort !== undefined) dictItems[index].sort = data.sort
-    if (data.remark !== undefined) dictItems[index].remark = data.remark
-    return successResponse(dictItems[index], '修改成功')
+    // 查找字典数据
+    const itemIndex = dictItems.findIndex(item => item.id === id)
+    if (itemIndex !== -1) {
+      // 更新字典数据
+      if (data.label !== undefined) dictItems[itemIndex].label = data.label
+      if (data.value !== undefined) dictItems[itemIndex].value = data.value
+      if (data.sort !== undefined) dictItems[itemIndex].sort = data.sort
+      if (data.remark !== undefined) dictItems[itemIndex].remark = data.remark
+      return successResponse(dictItems[itemIndex], '修改成功')
+    }
+
+    return errorResponse('数据不存在', 404)
   },
 
-  // 删除字典数据
+  /**
+   * 删除
+   * @param {number} id - ID
+   * @returns {Promise} 删除结果
+   */
   async remove(id) {
     await delay()
-    const index = dictItems.findIndex(item => item.id === id)
-    if (index === -1) {
-      return errorResponse('字典数据不存在', 404)
-    }
-    dictItems.splice(index, 1)
-    return successResponse(null, '删除成功')
-  },
-}
 
-/**
- * 根据字典编码查询（供其他模块调用）
- */
-export const dictQueryApi = {
+    // 先尝试查找字典类型
+    const typeIndex = dictTypes.findIndex(t => t.id === id)
+    if (typeIndex !== -1) {
+      // 删除字典类型（级联删除字典数据）
+      for (let i = dictItems.length - 1; i >= 0; i--) {
+        if (dictItems[i].typeId === id) {
+          dictItems.splice(i, 1)
+        }
+      }
+      dictTypes.splice(typeIndex, 1)
+      return successResponse(null, '删除成功')
+    }
+
+    // 查找字典数据
+    const itemIndex = dictItems.findIndex(item => item.id === id)
+    if (itemIndex !== -1) {
+      dictItems.splice(itemIndex, 1)
+      return successResponse(null, '删除成功')
+    }
+
+    return errorResponse('数据不存在', 404)
+  },
+
+  /**
+   * 启用
+   * @param {number} id - 字典类型 ID
+   * @returns {Promise} 操作结果
+   */
+  async on(id) {
+    await delay()
+    const index = dictTypes.findIndex(t => t.id === id)
+    if (index === -1) {
+      return errorResponse('字典类型不存在', 404)
+    }
+    dictTypes[index].status = 1
+    return successResponse(dictTypes[index], '启用成功')
+  },
+
+  /**
+   * 关闭
+   * @param {number} id - 字典类型 ID
+   * @returns {Promise} 操作结果
+   */
+  async off(id) {
+    await delay()
+    const index = dictTypes.findIndex(t => t.id === id)
+    if (index === -1) {
+      return errorResponse('字典类型不存在', 404)
+    }
+    dictTypes[index].status = 0
+    return successResponse(dictTypes[index], '关闭成功')
+  },
+
+  /**
+   * 根据编码查询（供其他模块调用）
+   * @param {string} typeCode - 类型编码
+   * @returns {Promise} 字典数据列表
+   */
   async getByCode(typeCode) {
     await delay()
     const type = dictTypes.find(t => t.code === typeCode)

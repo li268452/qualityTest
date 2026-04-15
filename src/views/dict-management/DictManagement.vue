@@ -50,7 +50,7 @@ import DictTypeList from './components/DictTypeList.vue'
 import DictDataList from './components/DictDataList.vue'
 import DictTypeForm from './components/DictTypeForm.vue'
 import DictDataForm from './components/DictDataForm.vue'
-import { dictTypeApi, dictItemApi } from './mock/dictMock.js'
+import { dictTypeApi, dictItemApi } from '@/api/mock/dict-management/dictMock.js'
 
 export default {
   name: 'DictManagement',

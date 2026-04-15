@@ -702,14 +702,6 @@ function parseBusinessRules(doc) {
 
 // 动态导入 Mock API 模块
 async function loadMockApi(modulePath) {
-  // 调试：打印配置信息
-  const isDebug = process.env.DEBUG === 'true'
-  if (isDebug) {
-    console.log('[loadMockApi] modulePath:', modulePath)
-    console.log('[loadMockApi] MOCK_SEARCH_PATHS:', MOCK_SEARCH_PATHS)
-    console.log('[loadMockApi] PROJECT_ROOT:', PROJECT_ROOT)
-  }
-
   // 处理带目录的模块路径（如 user-center/user-login）
   const baseName = modulePath.includes('/') ? path.basename(modulePath) : modulePath
 
@@ -721,9 +713,6 @@ async function loadMockApi(modulePath) {
   if (baseName.endsWith('-management')) {
     possibleNames.unshift(baseName.replace('-management', ''))
   }
-
-  // 规范化 API 名称（如 coupon-management -> couponApi）
-  const apiName = `${possibleNames[0].replace(/-([a-z])/g, (_, c) => c.toUpperCase())}Api`
 
   // 构建所有可能的搜索路径
   const possiblePaths = []
@@ -766,43 +755,16 @@ async function loadMockApi(modulePath) {
   // 去重并尝试加载
   const uniquePaths = [...new Set(possiblePaths)]
 
-  if (isDebug) {
-    console.log(`[loadMockApi] Searching ${uniquePaths.length} paths for ${apiName}...`)
-  }
-
   for (const mockPath of uniquePaths) {
     try {
-      const exists = fs.existsSync(mockPath)
-      if (isDebug && exists) {
-        console.log(`[loadMockApi] ✅ Found: ${path.relative(PROJECT_ROOT, mockPath)}`)
-      }
-      if (exists) {
+      if (fs.existsSync(mockPath)) {
         // 使用 file:// 协议导入
         const module = await import(`file://${mockPath}`)
-        const result = module[apiName] || module.mockApi || module.default || module
-        if (result) {
-          if (isDebug) {
-            console.log(`[loadMockApi] ✅ Loaded ${apiName} with methods:`, Object.keys(result))
-          }
-          return result
-        }
+        return module[apiName] || module.mockApi || module.default || module
       }
     } catch (e) {
-      if (isDebug) {
-        console.log(
-          `[loadMockApi] ❌ Import failed for ${path.relative(PROJECT_ROOT, mockPath)}:`,
-          e.message
-        )
-      }
       // 继续尝试下一个路径
     }
-  }
-
-  if (isDebug) {
-    console.log(`[loadMockApi] ❌ All paths failed, first 5:`)
-    uniquePaths.slice(0, 5).forEach((p, i) => {
-      console.log(`  ${i + 1}. ${path.relative(PROJECT_ROOT, p)}`)
-    })
   }
 
   throw new Error(

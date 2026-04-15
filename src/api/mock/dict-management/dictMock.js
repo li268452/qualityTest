@@ -227,7 +227,7 @@ export const dictApi = {
     }
 
     const typeItems = dictItems.filter(item => item.typeCode === typeCode)
-    if (typeItems.some(item => item.value === data.value)) {
+    if (typeItems.some(item => String(item.value) === String(data.value))) {
       return errorResponse('字典值已存在')
     }
 

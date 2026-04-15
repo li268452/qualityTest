@@ -49,7 +49,7 @@
 </template>
 
 <script>
-import { dictQueryApi } from '../dict-management/mock/dictMock.js'
+import { dictQueryApi } from '@/api/mock/dict-management/dictMock.js'
 
 export default {
   name: 'CouponForm',

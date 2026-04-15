@@ -97,7 +97,7 @@
 </template>
 
 <script>
-import { couponApi } from './mock/couponMock.js'
+import { couponApi } from '@/api/mock/coupon-management/couponMock.js'
 import CouponForm from './CouponForm.vue'
 
 export default {

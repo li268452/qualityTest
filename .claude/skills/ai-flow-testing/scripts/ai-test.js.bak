@@ -63,16 +63,16 @@ const SRC_DIR = path.join(PROJECT_ROOT, projectConfig.srcDir || 'src')
 
 // Mock API 搜索路径（支持标准 Vue3 结构）
 const MOCK_SEARCH_PATHS = projectConfig.mockPaths || [
-  'src/api/mock', // 标准 Vue3 结构：src/api/mock/{module}/
-  'src/mock', // 备选位置
-  'test/mock', // 测试目录
+  'src/api/mock',           // 标准 Vue3 结构：src/api/mock/{module}/
+  'src/mock',               // 备选位置
+  'test/mock',              // 测试目录
 ]
 
 // Vue 组件搜索路径（支持标准 Vue3 结构）
 const VIEW_SEARCH_PATHS = projectConfig.viewPaths || [
-  'src/views', // 标准 Vue3 结构
-  'src/pages', // 备选
-  'src/modules', // 兼容旧结构
+  'src/views',              // 标准 Vue3 结构
+  'src/pages',              // 备选
+  'src/modules',            // 兼容旧结构
 ]
 
 // 全局字段映射缓存
@@ -441,11 +441,7 @@ function parseFlows(doc, fieldMapping = {}) {
           skip = true // UI操作，跳过
         } else if (stepText.includes('填写') || stepText.includes('输入')) {
           skip = true // 填写操作，参数已在save步骤中收集
-        } else if (
-          stepText.includes('点击保存') ||
-          stepText.includes('点击提交') ||
-          stepText.includes('点击确认')
-        ) {
+        } else if (stepText.includes('点击保存') || stepText.includes('点击提交') || stepText.includes('点击确认')) {
           hasSaveStep = true
           action = '[新增]'
           expectation = '→ 期望成功'
@@ -460,17 +456,11 @@ function parseFlows(doc, fieldMapping = {}) {
           }
         } else if (stepText.includes('调用') && stepText.includes('接口')) {
           skip = true // 内部调用，跳过
-        } else if (
-          stepText.includes('返回成功') ||
-          (stepText.includes('返回') && stepText.includes('成功'))
-        ) {
+        } else if (stepText.includes('返回成功') || (stepText.includes('返回') && stepText.includes('成功'))) {
           skip = true // 隐式验证，跳过
         } else if (stepText.includes('刷新') || stepText.includes('加载')) {
           skip = true // 隐式验证，跳过
-        } else if (
-          stepText.includes('选择') &&
-          (stepText.includes('优惠券') || stepText.includes('数据'))
-        ) {
+        } else if (stepText.includes('选择') && (stepText.includes('优惠券') || stepText.includes('数据'))) {
           action = '[查询]'
           description = '查询列表'
           expectation = '→ 期望成功'
@@ -702,14 +692,6 @@ function parseBusinessRules(doc) {
 
 // 动态导入 Mock API 模块
 async function loadMockApi(modulePath) {
-  // 调试：打印配置信息
-  const isDebug = process.env.DEBUG === 'true'
-  if (isDebug) {
-    console.log('[loadMockApi] modulePath:', modulePath)
-    console.log('[loadMockApi] MOCK_SEARCH_PATHS:', MOCK_SEARCH_PATHS)
-    console.log('[loadMockApi] PROJECT_ROOT:', PROJECT_ROOT)
-  }
-
   // 处理带目录的模块路径（如 user-center/user-login）
   const baseName = modulePath.includes('/') ? path.basename(modulePath) : modulePath
 
@@ -721,9 +703,6 @@ async function loadMockApi(modulePath) {
   if (baseName.endsWith('-management')) {
     possibleNames.unshift(baseName.replace('-management', ''))
   }
-
-  // 规范化 API 名称（如 coupon-management -> couponApi）
-  const apiName = `${possibleNames[0].replace(/-([a-z])/g, (_, c) => c.toUpperCase())}Api`
 
   // 构建所有可能的搜索路径
   const possiblePaths = []
@@ -766,48 +745,19 @@ async function loadMockApi(modulePath) {
   // 去重并尝试加载
   const uniquePaths = [...new Set(possiblePaths)]
 
-  if (isDebug) {
-    console.log(`[loadMockApi] Searching ${uniquePaths.length} paths for ${apiName}...`)
-  }
-
   for (const mockPath of uniquePaths) {
     try {
-      const exists = fs.existsSync(mockPath)
-      if (isDebug && exists) {
-        console.log(`[loadMockApi] ✅ Found: ${path.relative(PROJECT_ROOT, mockPath)}`)
-      }
-      if (exists) {
+      if (fs.existsSync(mockPath)) {
         // 使用 file:// 协议导入
         const module = await import(`file://${mockPath}`)
-        const result = module[apiName] || module.mockApi || module.default || module
-        if (result) {
-          if (isDebug) {
-            console.log(`[loadMockApi] ✅ Loaded ${apiName} with methods:`, Object.keys(result))
-          }
-          return result
-        }
+        return module[apiName] || module.mockApi || module.default || module
       }
     } catch (e) {
-      if (isDebug) {
-        console.log(
-          `[loadMockApi] ❌ Import failed for ${path.relative(PROJECT_ROOT, mockPath)}:`,
-          e.message
-        )
-      }
       // 继续尝试下一个路径
     }
   }
 
-  if (isDebug) {
-    console.log(`[loadMockApi] ❌ All paths failed, first 5:`)
-    uniquePaths.slice(0, 5).forEach((p, i) => {
-      console.log(`  ${i + 1}. ${path.relative(PROJECT_ROOT, p)}`)
-    })
-  }
-
-  throw new Error(
-    `找不到 Mock API 模块: ${modulePath}\n尝试的路径:\n${uniquePaths.slice(0, 5).join('\n')}...`
-  )
+  throw new Error(`找不到 Mock API 模块: ${modulePath}\n尝试的路径:\n${uniquePaths.slice(0, 5).join('\n')}...`)
 }
 
 // 验证接口映射
@@ -970,10 +920,7 @@ async function executeStep(api, step, context, modulePath, fieldMapping = {}) {
         // 解析编码并调用 dictQueryApi.getByCode
         const codeMatch = description.match(/编码[=:："']\s*([a-z_]+)/i)
         if (codeMatch && api.dictQueryApi) {
-          const result = await callAndValidateApi(
-            api.dictQueryApi.getByCode(codeMatch[1]),
-            'dictQueryApi.getByCode'
-          )
+          const result = await callAndValidateApi(api.dictQueryApi.getByCode(codeMatch[1]), 'dictQueryApi.getByCode')
           if (result.code === 200) {
             context.lastData = result.data
             return {
@@ -1024,14 +971,7 @@ async function executeStep(api, step, context, modulePath, fieldMapping = {}) {
 }
 
 // 执行新增操作
-async function executeCreate(
-  api,
-  description,
-  context,
-  expectation,
-  fieldMapping = {},
-  modulePath = null
-) {
+async function executeCreate(api, description, context, expectation, fieldMapping = {}, modulePath = null) {
   // 使用通用参数解析器
   let params = parseParameters(description, fieldMapping)
   params = normalizeParams(params, fieldMapping)
@@ -1049,7 +989,9 @@ async function executeCreate(
   const isDictType = params.code !== undefined
   const isDictData =
     !isDictType &&
-    (params.label !== undefined || params.value !== undefined || params.sort !== undefined)
+    (params.label !== undefined ||
+      params.value !== undefined ||
+      params.sort !== undefined)
 
   let result
   if (isDictData) {
